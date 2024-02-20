@@ -8,6 +8,13 @@ format:
 jupyter: julia-1.10
 ---
 
+```{julia}
+#| echo: false
+#| output: false
+using Pkg
+Pkg.instantiate()
+```
+
 ## Parametric Plots
 
 Plot function pair (x(u), y(u)). 
