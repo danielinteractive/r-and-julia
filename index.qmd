@@ -2,9 +2,9 @@
 title: "Plots Demo"
 author: "Norah Jones"
 date: "5/22/2021"
-format:
-  html:
-    code-fold: true
+format: 
+  revealjs:
+    incremental: true
 jupyter: julia-1.10
 ---
 
