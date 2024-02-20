@@ -12,7 +12,7 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@v2
       - uses: julia-actions/setup-julia@v1
       - run: pip install jupyter
-      - run: julia -e 'using Pkg; Pkg.add("IJulia")
+      - run: julia -e 'using Pkg; Pkg.add("IJulia")'
       - uses: quarto-dev/quarto-actions/publish@v2
         with:
           target: gh-pages
