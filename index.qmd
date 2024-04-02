@@ -201,6 +201,10 @@ To do when Julia package is finished
 
 # Why does R(omeo) love Julia?
 
+## Zoom in on the logo!
+
+![](randjulia.svg){width=100%}
+
 ## Julia is easy if you know R
 
 - Try out code in the Julia REPL (like in R)
