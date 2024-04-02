@@ -37,7 +37,8 @@ Pkg.instantiate()
 - I am still learning the basics of Julia right now
 - Julia is my first new programming language since a bit of C++ before 2010 and a bit of Python in 2018-2020
 - I am still reading the book ["Algorithms with JULIA"](https://link.springer.com/book/10.1007/978-3-031-16560-3)
-- I am excited about Julia, because our initial two projects with it were pretty successful!
+- I am excited about Julia, because our initial two projects with it were pretty successful! (see below)
+- We are currently running a Julia course at Roche Basel (shout out to Antoine Soubret, Audrey Yeo, Marcelo Boareto, Niels Hagenbuch)
 
 ## What is Julia?
 
@@ -94,14 +95,18 @@ data = julia_set(grid, number, max_abs, N)
 heatmap(data)
 ```
 
-# Bayesian joint models
+## Julia in practice
+
+We tried Julia in two experimental projects ... and here they come!
+
+# Bayesian joint survival models
 
 ## Project overview
 
 - Project with our previous intern Yannik Ammann (ETH Zurich), and Doug Kelkhoff, Francois Mercier (Roche/Genentech)
 - Joint models of time-to-event data and longitudinal measurements [@Rizopoulos:2012]
 - Important application: survival and tumor size over time in Oncology patients [@Kerioui:2020]
-- Successfully implemented Bayesian joint models based on [Turing.jl](https://turing.ml/) [@Ge:2018]
+- Successfully implemented Bayesian joint survival models based on [Turing.jl](https://turing.ml/) [@Ge:2018]
 - Published open source as [JointSurvivalModels.jl](https://github.com/insightsengineering/JointSurvivalModels.jl)
 
 ## Model structure
@@ -127,6 +132,11 @@ $h(t) = h_0(t) \exp(\gamma\cdot l(m(t)))$
 ## Example (small glimpse) 
 
 ```{julia}
+#| label: joint-survival
+#| fig-cap: "Example survival function from joint model"
+#| echo: true
+#| code-fold: true
+#| code-summary: "Julia code"
 using JointSurvivalModels
 
 m(t, a, b) = t^(a) * (1+cos(b * t)^2)
@@ -147,16 +157,15 @@ plot(r, ccdf(jm, r), label = "Survival function")
 
 ## Project overview
 
-- Started with a request from safety assessment committee statistician (Susan Robson) and methods group (Kaspar Rufibach)
+- Started with a request from safety assessment committee statistician (Susan Robson) and methods group (Kaspar Rufibach), Giuseppe Palermo implemented analyses
 - They would like to implement Bayesian safety signal detection proposed by [@Brock:2023], see Kristian Brocks's [presentation](https://www.youtube.com/watch?v=oZBsuGlLobY)
-- Authors were not able to share the internally developed R/Stan implementation
-- So we had to look for an alternative, and since Kristian 
-already had a Julia code snippet, I started from there
+- Authors could not (yet) share R/Stan code
+- Alternative? Kristian already had a Julia code snippet, so started from there
 - Now evolved to the open source Julia package [SafetySignalDetection.jl](https://github.com/openpharma/SafetySignalDetection.jl)
 
 ## Step 1: Meta-analytic prior samples
 
-- Want to derive a prior distribution for the (specific) adverse event (AE) rate $\pi^{*}$ in the control arm of an ongoing blinded trial
+- Want to derive a prior for the adverse event (AE) rate $\pi^{*}$ in the control arm of an ongoing blinded trial
 - Assume we have $K$ historical trials with patient level data from comparable treatments
 - For each patient we have binary outcome $y_{ki}$ and time at risk $t_{ki}$, $k=1,\dotsc, K$, $i=1, \dotsc, n_k$
 - For the unit time AE risk assume $\pi_k \sim \textrm{Beta}(\dots)$, $k=1, \dotsc, K$ (historical) as well as $k+1$ (blinded)
@@ -164,7 +173,7 @@ already had a Julia code snippet, I started from there
 
 ## Step 2: Closed form MAP
 
-- We will need to do the safety analysis many times through the trial time
+- Safety analysis run many times throughout the trial
 - Therefore makes sense to only do Step 1 once
 - We can achieve this through approximating the MAP with a closed form
 - Here use a mixture of $J$ Beta distributions, often $J=2$ is sufficient, easily defined with [`Distributions.jl`](https://juliastats.org/Distributions.jl/stable/mixture/) [@Lin:2019]
@@ -183,8 +192,7 @@ already had a Julia code snippet, I started from there
 - EM algorithm uses internally the weighted maximum likelihood estimation method
 - The corresponding method is not defined (yet) for the Beta distribution in `Distributions.jl`
 - Needed to write down (pencil and paper first) the Newton-Raphson algorithm
-- Implement the corresponding Julia code and declare the method
-- And then it just works!
+- Implement the corresponding Julia code and declare the method ... and then it just works!
 - Also need to be careful which MCMC method to use (`NUTS` worked well, `HMC` not)
 
 ## Example
@@ -213,7 +221,7 @@ To do when Julia package is finished
 
 ## Julia can be used easily in Quarto
 
-- These slides are rendered from a Quarto [@Allaire:2022] document in the `revealjs` [@Hattab:2011] format, see my source [here](todo)
+- These slides are rendered from a Quarto [@Allaire:2022] document in the `revealjs` [@Hattab:2011] format, see my source [here](https://github.com/danielinteractive/r-and-julia)
 - Details are documented [here](https://quarto.org/docs/computations/julia.html)
 - Quarto has still some rough edges, but mostly works very well
 - Nice support from VScode editor for both Julia and Quarto, so you can e.g. preview the rendered document easily
@@ -256,7 +264,9 @@ affiliations = @chain members_swe begin
 n_affiliations = nrow(affiliations)
 ```
 
-- Official Software Engineering working group of the American Statistical Association (ASA) Biopharmaceutical Section
+- Official Software Engineering working group of 
+  - the American Statistical Association (ASA) Biopharmaceutical Section
+  - PSI/EFSPI
 - Formed on 19 August 2022 as a cross-industry collaboration 
 - Already `{julia} n_members` members from `{julia} n_affiliations` organizations, and open to new members!
 - Check out our homepage [openstatsware.org](https://openstatsware.org) for presentations, blog, contact us, etc.
@@ -268,11 +278,19 @@ n_affiliations = nrow(affiliations)
   - focusing on what is needed for biopharmaceutical applications
   - Examples: `mmrm`, `brms.mmrm`, HTA, covariate adjustment (ongoing work)
 
-## Secondar `openstatsware` objectives
+## Secondary `openstatsware` objectives
 
 - Develop and disseminate best practices for engineering high-quality open-source statistical software
   - By actively doing the statistical engineering work together, we align on best practices and can communicate these to others
   - Examples: workshops, 101 video series, white papers (ongoing work)
+
+## Collaboration with the community
+
+- We actively communicate and collaborate with other open source software initiatives, few examples:
+  - working with [CAMIS](https://psiaims.github.io/CAMIS/) to integrate additional methods
+  - working with [rOpenSci](https://psiaims.github.io/CAMIS/) on short guideline for best package practices
+- Working with [Safety Working Group](https://community.amstat.org/biop/workinggroups/safety-home) to support Shiny app development
+- Please reach out to us if you have ideas or questions!
 
 ## Thank you! Questions?
 
