@@ -1,11 +1,22 @@
 ---
-title: "Plots Demo"
-author: "Norah Jones"
-date: "5/22/2021"
+title: "R(omeo) and Julia - A Love Story by [`openstatsware`](https://openstatsware.org)"
+author: "[Daniel Sabanés Bové](https://www.linkedin.com/in/danielsabanesbove/)"
+subtitle: "PSI Webinar on Open Source Software"
+date: "17 April 2024"
+date-format: medium
+logo: randjulia.svg
+bibliography: references.bib
+execute: 
+  enabled: true
 format: 
   revealjs:
+    css: custom.css
     incremental: true
+    toc: true
+    toc-depth: 1
+    slide-number: c/t
 jupyter: julia-1.10
+engine: jupyter
 ---
 
 ```{julia}
@@ -15,21 +26,317 @@ using Pkg
 Pkg.instantiate()
 ```
 
-## Parametric Plots
+# Introducing Julia
 
-Plot function pair (x(u), y(u)). 
-See @fig-parametric for an example.
+## Introducing Julia
+
+![](https://upload.wikimedia.org/wikipedia/commons/1/1f/Julia_Programming_Language_Logo.svg){.r-stretch}
+
+## Me and Julia
+
+- I am excited about Julia, because our initial two projects with it were pretty successful! (see below)
+- I am still learning the basics of Julia
+- Julia is my first new programming language since a bit of C++ before 2010 and a bit of Python in 2018-2020
+- I am still reading the book ["Algorithms with JULIA"](https://link.springer.com/book/10.1007/978-3-031-16560-3)
+- We are currently running a Julia course at Roche Basel (shout out to Antoine Soubret, Audrey Yeo, Marcelo Boareto, Niels Hagenbuch)
+
+## What is Julia?
+
+- "Julia is a high-level, general-purpose dynamic programming language, most commonly used for numerical analysis and computational science" ([Wikipedia](https://en.wikipedia.org/wiki/Julia_(programming_language)))
+- Julia can be run interactively, just like R and Python, which makes programming easy
+- Julia's development started in 2009 at MIT, with a 1.0 release and stable syntax only in 2018 
+  - Compare Python (first version in 1991) and R (development since 1991)!
+- Julia is an open source project, and the JuliaHub Inc. company receives investor funding
+
+## What is Julia *not*?
+
+- A drop-in replacement for R or Python
+- A mainstream language in the next 10 years
+- A Large Language Model (LLM) / Generative AI
+  - But you can build, train and deploy LLM with Julia, see [here](https://github.com/svilupp/awesome-generative-ai-meets-julia-language)
+
+## [Julia set](https://en.wikipedia.org/wiki/Julia_set) with Julia
 
 ```{julia}
-#| label: fig-parametric
-#| fig-cap: "Parametric Plots"
+#| label: fig-plots
+#| fig-cap: "Adapted from [https://github.com/Mehdi-Haned/Julia-and-mandelbrot-with-julia/blob/main/julia%20set.jl](https://github.com/Mehdi-Haned/Julia-and-mandelbrot-with-julia/blob/main/julia%20set.jl)"
+#| echo: true
+#| code-fold: true
+#| code-summary: "Julia code"
 
 using Plots
 
-plot(sin, 
-     x->sin(2x), 
-     0, 
-     2π, 
-     leg=false, 
-     fill=(0,:lavender))
+function create_grid(dims, width, height)
+    xmin, xmax, ymin, ymax = dims
+    x = range(xmin, xmax, width)
+    y = range(ymin, ymax, height)
+    return (x' .* ones(height)) .+ reverse(y .* ones(width)' .* 1im)
+end
+
+function julia_set(cp, number::ComplexF64, max_abs, N)
+    n = zeros(Float64, size(cp))
+    for i in 1:N
+        b = abs.(cp) .<= max_abs
+        cp[b] .= (cp[b].^2) .+ number
+        n[b] .= n[b] .+ 1
+    end
+    1 .- sqrt.(n ./ N)
+end
+
+height, width = 500, 500
+domain = (-2, 2, -2, 2)
+grid = create_grid(domain, width, height)
+
+number = -0.1 - 0.65im
+max_abs = 10
+N = 500
+data = julia_set(grid, number, max_abs, N)
+
+heatmap(data)
 ```
+
+## Julia in practice
+
+We tried Julia in two experimental projects ... and here they come!
+
+# Bayesian joint survival models
+
+## Project overview
+
+- Project with our previous intern Yannik Ammann (ETH Zurich), and Doug Kelkhoff, Francois Mercier (Roche/Genentech)
+- Joint models of time-to-event data and longitudinal measurements [@Rizopoulos:2012]
+- Important application: survival and tumor size over time in Oncology patients [@Kerioui:2020]
+- Successfully implemented Bayesian joint survival models based on [Turing.jl](https://turing.ml/) [@Ge:2018]
+- Published open source as [JointSurvivalModels.jl](https://github.com/insightsengineering/JointSurvivalModels.jl)
+
+## Model structure
+
+- Longitudinal process is modeled by a function $m:\mathbb{R} \to \mathbb{R}$, for example a non-linear mixed effects model
+- Let the function $h_0:\mathbb{R} \to \mathbb{R}_{\geq 0}$ describe a baseline hazard
+- $\gamma\in\mathbb{R}$ be a coefficient of the link contribution
+- $l: \mathbb{R} \to \mathbb{R}$ is the link operator on the longitudinal process, examples are:
+  - $l(m(t)) = d/dt \; m(t)$
+  - $l(m(t)) = \int_0^t m(u) \, du$
+- Hazard of the joint survival model is then defined as
+$h(t) = h_0(t) \exp(\gamma\cdot l(m(t)))$
+
+## Computational challenges
+
+- Likelihood calculation needs the survival function $S(t)$
+- In general, and in particular for nonlinear longitudinal models $m(t)$, there is no closed form for $S(t)$
+- Need numerical integration of $h(t)$ to obtain cumulative hazard $H(t) = \int_0^t h(u) \, du$ $\rightarrow$
+   [Integrals.jl](https://docs.sciml.ai/Integrals/)
+- Want to maintain full flexibilty for defining the model components $\rightarrow$ Julia functions
+- Want to estimate parameters using Bayesian inference $\rightarrow$ [Turing.jl](https://turing.ml/)
+
+## Example (small glimpse) 
+
+```{julia}
+#| label: joint-survival
+#| fig-cap: "Example survival function from joint model"
+#| echo: true
+#| code-fold: true
+#| code-summary: "Julia code"
+using JointSurvivalModels
+
+m(t, a, b) = t^(a) * (1+cos(b * t)^2)
+h_0(t, α, θ) = α/θ *(t/θ)^(1-α)
+joint_model(a, b, γ, α, θ) = JointSurvivalModel(
+    t -> h_0(t, α, θ),
+    γ,
+    t -> m(t, a, b)
+)
+jm = joint_model(1, 2, 0.3, 0.5, 0.8)
+
+r = range(0, 2, 100)
+plot(r, ccdf(jm, r), label = "Survival function")
+```
+
+
+# Bayesian safety signal detection
+
+## Project overview
+
+- Started with a request from safety assessment committee statistician (Susan Robson) and methods group (Kaspar Rufibach), Giuseppe Palermo implemented analyses
+- They would like to implement Bayesian safety signal detection proposed by [@Brock:2023], see Kristian Brocks's [presentation](https://www.youtube.com/watch?v=oZBsuGlLobY)
+- Authors could not (yet) share R/Stan code
+- Alternative? Kristian already had a Julia code snippet, so started from there
+- Now evolved to the open source Julia package [SafetySignalDetection.jl](https://github.com/openpharma/SafetySignalDetection.jl)
+
+## Step 1: Meta-analytic prior samples
+
+- Want to derive a prior for the adverse event (AE) rate $\pi^{*}$ in the control arm of an ongoing blinded trial
+- Assume we have $K$ historical trials with patient level data from comparable treatments
+- For each patient we have binary outcome $y_{ki}$ and time at risk $t_{ki}$, $k=1,\dotsc, K$, $i=1, \dotsc, n_k$
+- For the unit time AE risk assume $\pi_k \sim \textrm{Beta}(\dots)$, $k=1, \dotsc, K$ (historical) as well as $k+1$ (blinded)
+- Using MCMC (`Turing.jl`), obtain posterior samples for $\pi^{*} \equiv \pi_{k+1}$ which are our meta-analytic prior (MAP) samples [@Schmidli:2014]
+
+## Step 2: Closed form MAP
+
+- Safety analysis run many times throughout the trial
+- Therefore makes sense to only do Step 1 once
+- We can achieve this through approximating the MAP with a closed form
+- Here use a mixture of $J$ Beta distributions, often $J=2$ is sufficient, easily defined with [`Distributions.jl`](https://juliastats.org/Distributions.jl/stable/mixture/) [@Lin:2019]
+- Use expectation-maximization (EM) algorithm enabled by [`ExpectationMaximization.jl`](https://dmetivie.github.io/ExpectationMaximization.jl/) [@Metivier:2022] to fit Beta parameters
+
+## Step 3: Blinded trial analysis
+
+- The ongoing trial is blinded, so we don't know for each patient the treatment arm
+- Therefore assume a mixture distribution, where the weight is given by the known randomization ratio
+- Again using MCMC, obtain posterior samples for the experimental $\pi_{\textrm{E}}$ and control $\pi_{\textrm{C}}$ AE risks
+- Summarize with e.g. $\gamma := \mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}})$
+- Declare safety signal if e.g. $\gamma > 0.8$
+
+## Computational challenges
+
+- EM algorithm uses internally the weighted maximum likelihood estimation method
+- The corresponding method is not defined (yet) for the Beta distribution in `Distributions.jl`
+- Needed to write down (pencil and paper first) the Newton-Raphson algorithm
+- Implement the corresponding Julia code and declare the method ... and then it just works!
+- Also need to be careful which MCMC method to use (`NUTS` worked well, `HMC` not)
+
+## Example (small glimpse)
+
+```{julia}
+#| label: safety-signal-detection
+#| fig-cap: "Example blinded trial analysis"
+#| echo: true
+#| code-fold: true
+#| code-summary: "Julia code"
+using SafetySignalDetection
+using Plots
+using Distributions
+using CSV
+using DataFrames
+using LaTeXStrings
+
+prior_exp = Beta(1, 1)
+prior_ctrl = MixtureModel( # MAP prior approximation
+  [Beta(3.89, 22.2), Beta(6.49, 28.8)], 
+  [0.48, 0.52]
+)
+exp_proportion = 0.5
+
+module_dir = pkgdir(SafetySignalDetection)
+csv_current_path = joinpath(module_dir, "docs", "src", "small_current_dataset.csv")
+df_current = DataFrame(CSV.File(csv_current_path))
+df_current.y = map(x -> x == 1, df_current.y) # y needs to be bool vector
+
+result = blinded_analysis_samples(df_current, prior_exp, prior_ctrl, exp_proportion, 10_000, 1)
+gamma = round(mean(result[!, :pi_exp] .> result[!, :pi_ctrl]), digits = 4)
+
+stephist(result[!, :pi_exp], label = "experimental arm", norm = :pdf)
+stephist!(result[!, :pi_ctrl], label = "control arm", norm = :pdf)
+title!(L"\mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}}) = %$gamma")
+```
+
+# Why does R(omeo) love Julia?
+
+## Zoom in on the logo!
+
+![](randjulia.svg){width=100%}
+
+## Julia is easy if you know R
+
+- Try out code in the Julia REPL (like in R)
+- Familiar syntax (closer to Python actually, but vectorized operations like in R)
+- No mandated typing (like in R)
+- Julia is naturally extensible via types and multiple dispatch (similar as with S4 in R)
+- Nice overview of noteworthy differences between Julia and R is available [here](https://docs.julialang.org/en/v1/manual/noteworthy-differences/#Noteworthy-differences-from-R)
+
+## Julia can be called easily from R
+
+- We can use the R package `JuliaConnectoR` [@Lenz:2022] to use Julia from R
+- We have used this for the safety signal detection project:
+  - Start with data input handling and data wrangling in R
+  - Method application in Julia using a custom local module (package)
+  - Plots and results summaries in R
+  - Wrote two helpers to convert R `data.frame` and Julia `DataFrame` into each other
+  - Used a Docker image with base R setup and installed Julia
+
+## Julia can be used easily in Quarto
+
+- These slides are rendered from a Quarto [@Allaire:2022] document in the `revealjs` [@Hattab:2011] format, see my source [here](https://github.com/danielinteractive/r-and-julia)
+- Details are documented [here](https://quarto.org/docs/computations/julia.html)
+- Quarto has still some rough edges, but mostly works very well
+- Nice support from VScode editor for both Julia and Quarto, so you can e.g. preview the rendered document easily
+
+## Some things feel easier with Julia than in R
+
+- You can do everything in one language - Julia: 
+  - MCMC: `Turing.jl` is Julia - while `Stan`, `JAGS` etc. are not R
+  - Optimization: Lots of [automatic differentiation](https://juliadiff.org/) tools in Julia,
+    while we had to go to C++ for our `mmrm` R package
+- Extensions are easier than in R:
+  - Adding new hazard based distribution was easy (first project)
+  - Adding new maximum likelihood routines was easy (second project)
+
+# And what is `openstatsware`?
+
+## Introducing `openstatsware`
+
+![](https://github.com/RConsortium/asa-biop-swe-wg/blob/main/sticker/sticker-new-1200.png?raw=true){.r-stretch}
+
+## What is `openstatsware`?
+
+```{julia}
+#| echo: false
+#| output: false
+using CSV
+using HTTP
+using DataFrames
+using DataFramesMeta
+
+http_response = HTTP.get("https://raw.githubusercontent.com/RConsortium/asa-biop-swe-wg/main/data/members.csv")
+file = CSV.File(http_response.body)
+members = DataFrame(file)
+members_swe = @subset(members, :SWE_WG_Member .== 1)
+n_members = nrow(members_swe)
+affiliations = @chain members_swe begin
+                  @select(:Affiliation)
+                  @distinct()
+              end
+n_affiliations = nrow(affiliations)
+```
+
+- Official Software Engineering working group of 
+  - the American Statistical Association (ASA) Biopharmaceutical Section
+  - PSI/EFSPI
+- Formed on 19 August 2022 as a cross-industry collaboration 
+- Already `{julia} n_members` members from `{julia} n_affiliations` organizations, and open to new members!
+- Check out our homepage [openstatsware.org](https://openstatsware.org) for presentations, blog, contact us, etc.
+
+## Primary `openstatsware` objectives
+
+- Engineer R packages that implement important statistical methods
+  - to fill in gaps in the open-source statistical software landscape
+  - focusing on what is needed for biopharmaceutical applications
+  - Examples: `mmrm`, `brms.mmrm`, HTA, covariate adjustment (ongoing work)
+
+## Secondary `openstatsware` objectives
+
+- Develop and disseminate best practices for engineering high-quality open-source statistical software
+  - By actively doing the statistical engineering work together, we align on best practices and can communicate these to others
+  - Examples: workshops, 101 video series, white papers (ongoing work)
+
+## Collaboration with the community
+
+- We actively communicate and collaborate with other open source software initiatives, few examples:
+  - working with [CAMIS](https://psiaims.github.io/CAMIS/) to integrate additional methods
+  - working with [rOpenSci](https://psiaims.github.io/CAMIS/) on short guideline for best package practices
+- Working with [Safety Working Group](https://community.amstat.org/biop/workinggroups/safety-home) to support Shiny app development
+- Please reach out to us if you have ideas or questions!
+
+## Thank you! Questions?
+
+These slides are at  
+[danielinteractive.github.io/randjulia](https://danielinteractive.github.io/randjulia/)
+
+Feel free to connect at  
+[linkedin.com/in/danielsabanesbove](https://www.linkedin.com/in/danielsabanesbove/)
+
+![](https://imgs.xkcd.com/comics/x.png){.r-stretch}
+
+## References {.scrollable}
+
+
