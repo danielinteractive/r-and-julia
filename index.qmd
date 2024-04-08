@@ -34,10 +34,10 @@ Pkg.instantiate()
 
 ## Me and Julia
 
-- I am still learning the basics of Julia right now
+- I am excited about Julia, because our initial two projects with it were pretty successful! (see below)
+- I am still learning the basics of Julia
 - Julia is my first new programming language since a bit of C++ before 2010 and a bit of Python in 2018-2020
 - I am still reading the book ["Algorithms with JULIA"](https://link.springer.com/book/10.1007/978-3-031-16560-3)
-- I am excited about Julia, because our initial two projects with it were pretty successful! (see below)
 - We are currently running a Julia course at Roche Basel (shout out to Antoine Soubret, Audrey Yeo, Marcelo Boareto, Niels Hagenbuch)
 
 ## What is Julia?
@@ -195,9 +195,40 @@ plot(r, ccdf(jm, r), label = "Survival function")
 - Implement the corresponding Julia code and declare the method ... and then it just works!
 - Also need to be careful which MCMC method to use (`NUTS` worked well, `HMC` not)
 
-## Example
+## Example (small glimpse)
 
-To do when Julia package is finished
+```{julia}
+#| label: safety-signal-detection
+#| fig-cap: "Example blinded trial analysis"
+#| echo: true
+#| code-fold: true
+#| code-summary: "Julia code"
+using SafetySignalDetection
+using Plots
+using Distributions
+using CSV
+using DataFrames
+using LaTeXStrings
+
+prior_exp = Beta(1, 1)
+prior_ctrl = MixtureModel( # MAP prior approximation
+  [Beta(3.89, 22.2), Beta(6.49, 28.8)], 
+  [0.48, 0.52]
+)
+exp_proportion = 0.5
+
+module_dir = pkgdir(SafetySignalDetection)
+csv_current_path = joinpath(module_dir, "docs", "src", "small_current_dataset.csv")
+df_current = DataFrame(CSV.File(csv_current_path))
+df_current.y = map(x -> x == 1, df_current.y) # y needs to be bool vector
+
+result = blinded_analysis_samples(df_current, prior_exp, prior_ctrl, exp_proportion, 10_000, 1)
+gamma = round(mean(result[!, :pi_exp] .> result[!, :pi_ctrl]), digits = 4)
+
+stephist(result[!, :pi_exp], label = "experimental arm", norm = :pdf)
+stephist!(result[!, :pi_ctrl], label = "control arm", norm = :pdf)
+title!(L"\mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}}) = %$gamma")
+```
 
 # Why does R(omeo) love Julia?
 
