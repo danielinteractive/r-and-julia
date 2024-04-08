@@ -59,7 +59,7 @@ Pkg.instantiate()
 
 ```{julia}
 #| label: fig-plots
-#| fig-cap: "Adapted from [https://github.com/Mehdi-Haned/Julia-and-mandelbrot-with-julia/blob/main/julia%20set.jl](https://github.com/Mehdi-Haned/Julia-and-mandelbrot-with-julia/blob/main/julia%20set.jl)"
+#| fig-cap: "Adapted from [Mehdi Haned](https://github.com/Mehdi-Haned/Julia-and-mandelbrot-with-julia/blob/main/julia%20set.jl)"
 #| echo: true
 #| code-fold: true
 #| code-summary: "Julia code"
@@ -141,17 +141,19 @@ using JointSurvivalModels
 
 m(t, a, b) = t^(a) * (1+cos(b * t)^2)
 h_0(t, α, θ) = α/θ *(t/θ)^(1-α)
-joint_model(a, b, γ, α, θ) = JointSurvivalModel(
+# create custom constructor:
+joint_model(a, b, γ, α, θ) = JointSurvivalModel( 
     t -> h_0(t, α, θ),
     γ,
     t -> m(t, a, b)
 )
-jm = joint_model(1, 2, 0.3, 0.5, 0.8)
+# call constructor to create jm object:
+jm = joint_model(1, 2, 0.3, 0.5, 0.8) 
 
+# plot ccdf = survival function via the implemented method
 r = range(0, 2, 100)
-plot(r, ccdf(jm, r), label = "Survival function")
+plot(r, ccdf(jm, r), label = "Survival function") 
 ```
-
 
 # Bayesian safety signal detection
 
@@ -165,11 +167,11 @@ plot(r, ccdf(jm, r), label = "Survival function")
 
 ## Step 1: Meta-analytic prior samples
 
-- Want to derive a prior for the adverse event (AE) rate $\pi^{*}$ in the control arm of an ongoing blinded trial
+- Want to derive a prior for the adverse event (AE) probability $\pi_{\textrm{C}}$ in the control arm of an ongoing blinded trial
 - Assume we have $K$ historical trials with patient level data from comparable treatments
 - For each patient we have binary outcome $y_{ki}$ and time at risk $t_{ki}$, $k=1,\dotsc, K$, $i=1, \dotsc, n_k$
-- For the unit time AE risk assume $\pi_k \sim \textrm{Beta}(\dots)$, $k=1, \dotsc, K$ (historical) as well as $k+1$ (blinded)
-- Using MCMC (`Turing.jl`), obtain posterior samples for $\pi^{*} \equiv \pi_{k+1}$ which are our meta-analytic prior (MAP) samples [@Schmidli:2014]
+- For the AE probability assume $\pi_k \sim \textrm{Beta}(\dots)$, $k=1, \dotsc, K$ (historical) as well as $k+1$ (blinded)
+- Using MCMC (`Turing.jl`), obtain posterior samples for $\pi_{\textrm{C}} \equiv \pi_{k+1}$ which are our meta-analytic prior (MAP) samples [@Schmidli:2014]
 
 ## Step 2: Closed form MAP
 
@@ -183,7 +185,7 @@ plot(r, ccdf(jm, r), label = "Survival function")
 
 - The ongoing trial is blinded, so we don't know for each patient the treatment arm
 - Therefore assume a mixture distribution, where the weight is given by the known randomization ratio
-- Again using MCMC, obtain posterior samples for the experimental $\pi_{\textrm{E}}$ and control $\pi_{\textrm{C}}$ AE risks
+- Again using MCMC, obtain posterior samples for the experimental $\pi_{\textrm{E}}$ and control $\pi_{\textrm{C}}$ AE probabilities per unit time
 - Summarize with e.g. $\gamma := \mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}})$
 - Declare safety signal if e.g. $\gamma > 0.8$
 
@@ -199,7 +201,7 @@ plot(r, ccdf(jm, r), label = "Survival function")
 
 ```{julia}
 #| label: safety-signal-detection
-#| fig-cap: "Example blinded trial analysis"
+#| fig-cap: "Example blinded trial analysis (step 3)"
 #| echo: true
 #| code-fold: true
 #| code-summary: "Julia code"
@@ -222,7 +224,14 @@ csv_current_path = joinpath(module_dir, "docs", "src", "small_current_dataset.cs
 df_current = DataFrame(CSV.File(csv_current_path))
 df_current.y = map(x -> x == 1, df_current.y) # y needs to be bool vector
 
-result = blinded_analysis_samples(df_current, prior_exp, prior_ctrl, exp_proportion, 10_000, 1)
+result = blinded_analysis_samples(
+  df_current, 
+  prior_exp, 
+  prior_ctrl, 
+  exp_proportion, 
+  20_000, # samples per chain
+  2 # chains
+)
 gamma = round(mean(result[!, :pi_exp] .> result[!, :pi_ctrl]), digits = 4)
 
 stephist(result[!, :pi_exp], label = "experimental arm", norm = :pdf)
@@ -241,7 +250,7 @@ title!(L"\mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}}) = %$gamma")
 - Try out code in the Julia REPL (like in R)
 - Familiar syntax (closer to Python actually, but vectorized operations like in R)
 - No mandated typing (like in R)
-- Julia is naturally extensible via types and multiple dispatch (similar as with S4 in R)
+- Julia is naturally extensible via types and multiple dispatch (similar as with S4 in R, but much easier)
 - Nice overview of noteworthy differences between Julia and R is available [here](https://docs.julialang.org/en/v1/manual/noteworthy-differences/#Noteworthy-differences-from-R)
 
 ## Julia can be called easily from R
@@ -264,7 +273,7 @@ title!(L"\mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}}) = %$gamma")
 ## Some things feel easier with Julia than in R
 
 - You can do everything in one language - Julia: 
-  - MCMC: `Turing.jl` is Julia - while `Stan`, `JAGS` etc. are not R
+  - MCMC: `Turing.jl` is Julia (`Stan`, `JAGS` etc. are not R)
   - Optimization: Lots of [automatic differentiation](https://juliadiff.org/) tools in Julia,
     while we had to go to C++ for our `mmrm` R package
 - Extensions are easier than in R:
@@ -299,7 +308,7 @@ affiliations = @chain members_swe begin
 n_affiliations = nrow(affiliations)
 ```
 
-- Official Software Engineering working group of 
+- Official Software Engineering working group of both
   - the American Statistical Association (ASA) Biopharmaceutical Section
   - PSI/EFSPI
 - Formed on 19 August 2022 as a cross-industry collaboration 
@@ -330,7 +339,7 @@ n_affiliations = nrow(affiliations)
 ## Thank you! Questions?
 
 These slides are at  
-[danielinteractive.github.io/randjulia](https://danielinteractive.github.io/randjulia/)
+[danielinteractive.github.io/r-and-julia](https://danielinteractive.github.io/r-and-julia/)
 
 Feel free to connect at  
 [linkedin.com/in/danielsabanesbove](https://www.linkedin.com/in/danielsabanesbove/)
