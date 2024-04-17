@@ -5,3 +5,4 @@ index_files
 /.quarto/
 index.ipynb
 _site/
+.DS_Store

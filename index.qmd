@@ -126,7 +126,7 @@ $h(t) = h_0(t) \exp(\gamma\cdot l(m(t)))$
 - In general, and in particular for nonlinear longitudinal models $m(t)$, there is no closed form for $S(t)$
 - Need numerical integration of $h(t)$ to obtain cumulative hazard $H(t) = \int_0^t h(u) \, du$ $\rightarrow$
    [Integrals.jl](https://docs.sciml.ai/Integrals/)
-- Want to maintain full flexibilty for defining the model components $\rightarrow$ Julia functions
+- Want to maintain full flexibility for defining the model components $\rightarrow$ Julia functions
 - Want to estimate parameters using Bayesian inference $\rightarrow$ [Turing.jl](https://turing.ml/)
 
 ## Example (small glimpse) 
@@ -284,7 +284,7 @@ title!(L"\mathbb{P}(\pi_{\textrm{E}} > \pi_{\textrm{C}}) = %$gamma")
 
 ## Introducing `openstatsware`
 
-![](https://github.com/RConsortium/asa-biop-swe-wg/blob/main/sticker/sticker-new-1200.png?raw=true){.r-stretch}
+![](https://raw.githubusercontent.com/RConsortium/asa-biop-swe-wg/main/sticker/openstatsware-hex.svg){.r-stretch}
 
 ## What is `openstatsware`?
 
